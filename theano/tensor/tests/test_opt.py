@@ -3287,6 +3287,13 @@ def test_local_fill_useless():
     assert T.Alloc in ops
     f(m_, x_)
 
+    # Check stacktrace is copied over
+    f = function([x], T.fill(x, x) * 2, mode=mode_opt)
+    assert [node.op for node in f.maker.fgraph.toposort()] == [T.mul]
+    assert hasattr(f.outputs[0].variable.tag, 'trace')
+    assert len(f.outputs[0].variable.tag.trace) > 0
+
+
 
 class Test_local_useless_elemwise_comparison(unittest.TestCase):
     def test_local_useless_elemwise_comparison(self):
@@ -3364,12 +3371,18 @@ class Test_local_useless_elemwise_comparison(unittest.TestCase):
         assert isinstance(elem.inputs[0], T.TensorConstant), elem
         assert T.extract_constant(elem.inputs[0]) == val, val
 
+        assert hasattr(f.outputs[0].variable.tag, 'trace')
+        assert len(f.outputs[0].variable.tag.trace) > 0
+
     def assert_identity(self, f):
         topo = f.maker.fgraph.toposort()
         assert len(topo) == 1
         assert topo[0].op == deep_copy_op
         x_val = 10
         assert f(x_val) == x_val
+
+        assert hasattr(f.outputs[0].variable.tag, 'trace')
+        assert len(f.outputs[0].variable.tag.trace) > 0
 
     #def assert_returns
 
@@ -4957,6 +4970,10 @@ class T_local_sum_prod(unittest.TestCase):
                              if isinstance(n.op, reduction_op)]
             assert len(prod_nodes) == nb_expected_sum_nodes
 
+            # Check stacktrace is copied over correctly
+            assert hasattr(f.outputs[0].variable.tag, 'trace')
+            assert len(f.outputs[0].variable.tag.trace) > 0
+
         # Test sum
 
         # Case 1
@@ -5017,18 +5034,33 @@ class T_local_sum_prod(unittest.TestCase):
         f = theano.function([a], a.sum(), mode=self.mode)
         assert len(f.maker.fgraph.apply_nodes) == 1
         assert numpy.allclose(f(input), input.sum())
+        # Check stacktrace is copied over correctly
+        assert hasattr(f.outputs[0].variable.tag, 'trace')
+        assert len(f.outputs[0].variable.tag.trace) > 0
+
         # test prod
         f = theano.function([a], a.prod(), mode=self.mode)
         assert len(f.maker.fgraph.apply_nodes) == 1
         assert numpy.allclose(f(input), input.prod())
+        # Check stacktrace is copied over correctly
+        assert hasattr(f.outputs[0].variable.tag, 'trace')
+        assert len(f.outputs[0].variable.tag.trace) > 0
+
         # test sum
         f = theano.function([a], a.sum([0, 1, 2]), mode=self.mode)
         assert len(f.maker.fgraph.apply_nodes) == 1
         assert numpy.allclose(f(input), input.sum())
+        # Check stacktrace is copied over correctly
+        assert hasattr(f.outputs[0].variable.tag, 'trace')
+        assert len(f.outputs[0].variable.tag.trace) > 0
+
         # test prod
         f = theano.function([a], a.prod([0, 1, 2]), mode=self.mode)
         assert len(f.maker.fgraph.apply_nodes) == 1
         assert numpy.allclose(f(input), input.prod())
+        # Check stacktrace is copied over correctly
+        assert hasattr(f.outputs[0].variable.tag, 'trace')
+        assert len(f.outputs[0].variable.tag.trace) > 0
 
         backup = config.warn.sum_sum_bug
         config.warn.sum_sum_bug = False
@@ -5088,11 +5120,17 @@ class T_local_sum_prod(unittest.TestCase):
                 f = theano.function([a], a.sum(d).sum(dd), mode=self.mode)
                 assert numpy.allclose(f(input), expected)
                 assert len(f.maker.fgraph.apply_nodes) == 1
+                # Check stacktrace is copied over correctly
+                assert hasattr(f.outputs[0].variable.tag, 'trace')
+                assert len(f.outputs[0].variable.tag.trace) > 0
             for d, dd in dims[:6]:
                 f = theano.function([a], a.sum(d).sum(dd).
                                     sum(0), mode=self.mode)
                 assert numpy.allclose(f(input), input.sum(d).sum(dd).sum(0))
                 assert len(f.maker.fgraph.apply_nodes) == 1
+                # Check stacktrace is copied over correctly
+                assert hasattr(f.outputs[0].variable.tag, 'trace')
+                assert len(f.outputs[0].variable.tag.trace) > 0
             for d in [0, 1, 2]:
                 f = theano.function([a], a.sum(d).sum(None), mode=self.mode)
                 assert numpy.allclose(f(input), input.sum(d).sum())
@@ -5100,6 +5138,9 @@ class T_local_sum_prod(unittest.TestCase):
             f = theano.function([a], a.sum(None).sum(), mode=self.mode)
             assert numpy.allclose(f(input), input.sum())
             assert len(f.maker.fgraph.apply_nodes) == 1
+            # Check stacktrace is copied over correctly
+            assert hasattr(f.outputs[0].variable.tag, 'trace')
+            assert len(f.outputs[0].variable.tag.trace) > 0
         finally:
             config.warn.sum_sum_bug = backup
 
@@ -5109,18 +5150,30 @@ class T_local_sum_prod(unittest.TestCase):
             f = theano.function([a], a.prod(d).prod(dd), mode=self.mode)
             assert numpy.allclose(f(input), expected)
             assert len(f.maker.fgraph.apply_nodes) == 1
+            # Check stacktrace is copied over correctly
+            assert hasattr(f.outputs[0].variable.tag, 'trace')
+            assert len(f.outputs[0].variable.tag.trace) > 0
         for d, dd in dims[:6]:
             f = theano.function([a], a.prod(d).prod(dd).
                                 prod(0), mode=self.mode)
             assert numpy.allclose(f(input), input.prod(d).prod(dd).prod(0))
             assert len(f.maker.fgraph.apply_nodes) == 1
+            # Check stacktrace is copied over correctly
+            assert hasattr(f.outputs[0].variable.tag, 'trace')
+            assert len(f.outputs[0].variable.tag.trace) > 0
         for d in [0, 1, 2]:
             f = theano.function([a], a.prod(d).prod(None), mode=self.mode)
             assert numpy.allclose(f(input), input.prod(d).prod())
             assert len(f.maker.fgraph.apply_nodes) == 1
+            # Check stacktrace is copied over correctly
+            assert hasattr(f.outputs[0].variable.tag, 'trace')
+            assert len(f.outputs[0].variable.tag.trace) > 0
         f = theano.function([a], a.prod(None).prod(), mode=self.mode)
         assert numpy.allclose(f(input), input.prod())
         assert len(f.maker.fgraph.apply_nodes) == 1
+        # Check stacktrace is copied over correctly
+        assert hasattr(f.outputs[0].variable.tag, 'trace')
+        assert len(f.outputs[0].variable.tag.trace) > 0
 
         # test sum prod don't get opt.
         for d, dd in dims:
@@ -5128,18 +5181,30 @@ class T_local_sum_prod(unittest.TestCase):
             f = theano.function([a], a.sum(d).prod(dd), mode=self.mode)
             assert numpy.allclose(f(input), expected)
             assert len(f.maker.fgraph.apply_nodes) == 2
+            # Check stacktrace is copied over correctly
+            assert hasattr(f.outputs[0].variable.tag, 'trace')
+            assert len(f.outputs[0].variable.tag.trace) > 0
         for d, dd in dims[:6]:
             f = theano.function([a], a.sum(d).prod(dd).
                                 prod(0), mode=self.mode)
             assert numpy.allclose(f(input), input.sum(d).prod(dd).prod(0))
             assert len(f.maker.fgraph.apply_nodes) == 2
+            # Check stacktrace is copied over correctly
+            assert hasattr(f.outputs[0].variable.tag, 'trace')
+            assert len(f.outputs[0].variable.tag.trace) > 0
         for d in [0, 1, 2]:
             f = theano.function([a], a.sum(d).prod(None), mode=self.mode)
             assert numpy.allclose(f(input), input.sum(d).prod())
             assert len(f.maker.fgraph.apply_nodes) == 2
+            # Check stacktrace is copied over correctly
+            assert hasattr(f.outputs[0].variable.tag, 'trace')
+            assert len(f.outputs[0].variable.tag.trace) > 0
         f = theano.function([a], a.sum(None).prod(), mode=self.mode)
         assert numpy.allclose(f(input), input.sum())
         assert len(f.maker.fgraph.apply_nodes) == 1
+        # Check stacktrace is copied over correctly
+        assert hasattr(f.outputs[0].variable.tag, 'trace')
+        assert len(f.outputs[0].variable.tag.trace) > 0
 
 
     def test_local_sum_prod_alloc(self):
@@ -5155,10 +5220,16 @@ class T_local_sum_prod(unittest.TestCase):
             f = theano.function([a], t_like(a).sum(None), mode=mode)
             assert numpy.allclose(f(input), n_like(input).sum())
             assert len(f.maker.fgraph.apply_nodes) == nb_nodes[0]
+            # Check stacktrace is copied over correctly
+            assert hasattr(f.outputs[0].variable.tag, 'trace')
+            assert len(f.outputs[0].variable.tag.trace) > 0
 
             f = theano.function([a], t_like(a).sum([0, 1, 2]), mode=mode)
             assert numpy.allclose(f(input), n_like(input).sum())
             assert len(f.maker.fgraph.apply_nodes) == nb_nodes[0]
+            # Check stacktrace is copied over correctly
+            assert hasattr(f.outputs[0].variable.tag, 'trace')
+            assert len(f.outputs[0].variable.tag.trace) > 0
 
             for d in xrange(3):
                 f = theano.function([a], t_like(a).sum(d), mode=mode)
@@ -5167,6 +5238,9 @@ class T_local_sum_prod(unittest.TestCase):
                 topo = f.maker.fgraph.toposort()
                 assert topo[-1].op == T.alloc
                 assert not any([isinstance(node.op, T.Sum) for node in topo])
+                # Check stacktrace is copied over correctly
+                assert hasattr(f.outputs[0].variable.tag, 'trace')
+                assert len(f.outputs[0].variable.tag.trace) > 0
             for i in xrange(3):
                 f = theano.function([a], t_like(a).sum(i), mode=mode)
                 assert numpy.allclose(f(input), n_like(input).sum(i))
@@ -5174,15 +5248,24 @@ class T_local_sum_prod(unittest.TestCase):
                 topo = f.maker.fgraph.toposort()
                 assert topo[-1].op == T.alloc
                 assert not any([isinstance(node.op, T.Sum) for node in topo])
+                # Check stacktrace is copied over correctly
+                assert hasattr(f.outputs[0].variable.tag, 'trace')
+                assert len(f.outputs[0].variable.tag.trace) > 0
 
             # test prod
             f = theano.function([a], t_like(a).prod(None), mode=mode)
             assert numpy.allclose(f(input), n_like(input).prod())
             #assert len(f.maker.fgraph.apply_nodes) == nb_nodes[0]
+            # Check stacktrace is copied over correctly
+            assert hasattr(f.outputs[0].variable.tag, 'trace')
+            assert len(f.outputs[0].variable.tag.trace) > 0
 
             f = theano.function([a], t_like(a).prod([0, 1, 2]), mode=mode)
             assert numpy.allclose(f(input), n_like(input).prod())
             #assert len(f.maker.fgraph.apply_nodes) == nb_nodes[0]
+            # Check stacktrace is copied over correctly
+            assert hasattr(f.outputs[0].variable.tag, 'trace')
+            assert len(f.outputs[0].variable.tag.trace) > 0
 
             for d in range(3):
                 f = theano.function([a], t_like(a).prod(d), mode=mode)
@@ -5191,6 +5274,9 @@ class T_local_sum_prod(unittest.TestCase):
                 topo = f.maker.fgraph.toposort()
                 assert topo[-1].op == T.alloc
                 assert not any([isinstance(node.op, T.elemwise.Prod) for node in topo])
+                # Check stacktrace is copied over correctly
+                assert hasattr(f.outputs[0].variable.tag, 'trace')
+                assert len(f.outputs[0].variable.tag.trace) > 0
             for i in range(3):
                 f = theano.function([a], t_like(a).prod(i), mode=mode)
                 assert numpy.allclose(f(input), n_like(input).prod(i))
@@ -5198,6 +5284,9 @@ class T_local_sum_prod(unittest.TestCase):
                 topo = f.maker.fgraph.toposort()
                 assert topo[-1].op == T.alloc
                 assert not any([isinstance(node.op, T.elemwise.Prod) for node in topo])
+                # Check stacktrace is copied over correctly
+                assert hasattr(f.outputs[0].variable.tag, 'trace')
+                assert len(f.outputs[0].variable.tag.trace) > 0
 
             backup = config.warn.sum_sum_bug
             config.warn.sum_sum_bug = False
@@ -5212,6 +5301,9 @@ class T_local_sum_prod(unittest.TestCase):
                     assert topo[-1].op == T.alloc
                     assert not any([isinstance(node.op,
                                                T.Sum) for node in topo])
+                    # Check stacktrace is copied over correctly
+                    assert hasattr(f.outputs[0].variable.tag, 'trace')
+                    assert len(f.outputs[0].variable.tag.trace) > 0
             finally:
                 config.warn.sum_sum_bug = backup
 
@@ -5892,6 +5984,9 @@ def test_local_flatten_lift():
         assert isinstance(topo[0].op, tensor.Flatten)
         assert isinstance(topo[1].op, tensor.Elemwise)
 
+        assert hasattr(f.outputs[0].variable.tag, 'trace')
+        assert len(f.outputs[0].variable.tag.trace) > 0
+
 
 class Test_Reshape(unittest.TestCase):
     def setUp(self):
@@ -5928,6 +6023,9 @@ def test_local_reshape_lift():
     topo = f.maker.fgraph.toposort()
     assert isinstance(topo[-2].op, tensor.Reshape)
     assert isinstance(topo[-1].op, tensor.Elemwise)
+
+    assert hasattr(f.outputs[0].variable.tag, 'trace')
+    assert len(f.outputs[0].variable.tag.trace) > 0
 
 
 class Test_lift_transpose_through_dot(unittest.TestCase):
